@@ -1,3 +1,8 @@
+#![expect(
+    clippy::if_same_then_else,
+    reason = "generated i18n accessors may share text across locales"
+)]
+
 use crate::settings::{get_settings, update_settings};
 use std::sync::OnceLock;
 use std::sync::RwLock;
@@ -3061,12 +3066,10 @@ pub mod texts {
             } else {
                 "选择模型".to_string()
             }
+        } else if fetching {
+            "Select Model (Fetching...)".to_string()
         } else {
-            if fetching {
-                "Select Model (Fetching...)".to_string()
-            } else {
-                "Select Model".to_string()
-            }
+            "Select Model".to_string()
         }
     }
 
@@ -4260,11 +4263,19 @@ pub mod texts {
         }
     }
 
-    pub fn tui_settings_proxy_stop_before_edit_hint() -> &'static str {
+    pub fn tui_settings_proxy_stop_before_edit_hint(current_app_is_active: bool) -> &'static str {
         if is_chinese() {
-            "请先停止本地代理，再修改监听地址或端口"
+            if current_app_is_active {
+                "修改监听地址：需先停止本地代理。修改监听端口：需先停止当前应用的代理路由。改完后重新启动路由生效。"
+            } else {
+                "修改监听地址：需先停止本地代理。监听端口可以修改。改完后重新启动路由生效。"
+            }
         } else {
-            "Stop the local proxy before editing listen address or port"
+            if current_app_is_active {
+                "Listen address: stop the proxy to edit. Listen port: stop this app's route to edit. Restart routing after changes."
+            } else {
+                "Listen address: stop the proxy to edit. Listen port can be edited. Restart routing after changes."
+            }
         }
     }
 
@@ -4300,11 +4311,19 @@ pub mod texts {
         }
     }
 
-    pub fn tui_toast_proxy_settings_stop_before_edit() -> &'static str {
+    pub fn tui_toast_proxy_settings_stop_proxy_before_edit_address() -> &'static str {
         if is_chinese() {
-            "本地代理正在运行。请先停止代理，再修改监听地址或端口。"
+            "本地代理正在运行。请先停止代理，再修改监听地址。"
         } else {
-            "The local proxy is running. Stop it before editing listen address or port."
+            "The local proxy is running. Stop it before editing listen address."
+        }
+    }
+
+    pub fn tui_toast_proxy_settings_stop_app_route_before_edit_port() -> &'static str {
+        if is_chinese() {
+            "当前应用正在使用代理。请先停止当前应用的代理路由，再修改监听端口。"
+        } else {
+            "This app is using the proxy. Stop this app's proxy route before editing listen port."
         }
     }
 
@@ -6926,12 +6945,10 @@ pub mod texts {
             } else {
                 "仓库已禁用。".to_string()
             }
+        } else if enabled {
+            "Repository enabled.".to_string()
         } else {
-            if enabled {
-                "Repository enabled.".to_string()
-            } else {
-                "Repository disabled.".to_string()
-            }
+            "Repository disabled.".to_string()
         }
     }
 
@@ -6942,12 +6959,10 @@ pub mod texts {
             } else {
                 "已恢复 Claude Code 初次安装确认。".to_string()
             }
+        } else if enabled {
+            "Claude Code onboarding confirmation will be skipped.".to_string()
         } else {
-            if enabled {
-                "Claude Code onboarding confirmation will be skipped.".to_string()
-            } else {
-                "Claude Code onboarding confirmation restored.".to_string()
-            }
+            "Claude Code onboarding confirmation restored.".to_string()
         }
     }
 
@@ -6958,12 +6973,10 @@ pub mod texts {
             } else {
                 "已关闭 Claude Code for VSCode 插件联动。".to_string()
             }
+        } else if enabled {
+            "Claude Code for VSCode integration enabled.".to_string()
         } else {
-            if enabled {
-                "Claude Code for VSCode integration enabled.".to_string()
-            } else {
-                "Claude Code for VSCode integration disabled.".to_string()
-            }
+            "Claude Code for VSCode integration disabled.".to_string()
         }
     }
 
@@ -10186,16 +10199,14 @@ pub mod texts {
                     "确认恢复 Claude Code 初次安装确认？\n将从 {path} 删除 hasCompletedOnboarding"
                 )
             }
+        } else if enable {
+            format!(
+                "Enable skipping Claude Code onboarding confirmation?\nWrites hasCompletedOnboarding=true to {path}"
+            )
         } else {
-            if enable {
-                format!(
-                    "Enable skipping Claude Code onboarding confirmation?\nWrites hasCompletedOnboarding=true to {path}"
-                )
-            } else {
-                format!(
-                    "Disable skipping Claude Code onboarding confirmation?\nRemoves hasCompletedOnboarding from {path}"
-                )
-            }
+            format!(
+                "Disable skipping Claude Code onboarding confirmation?\nRemoves hasCompletedOnboarding from {path}"
+            )
         }
     }
 
@@ -10206,12 +10217,10 @@ pub mod texts {
             } else {
                 "✓ 已恢复 Claude Code 初次安装确认".to_string()
             }
+        } else if enable {
+            "✓ Skip Claude Code onboarding confirmation enabled".to_string()
         } else {
-            if enable {
-                "✓ Skip Claude Code onboarding confirmation enabled".to_string()
-            } else {
-                "✓ Claude Code onboarding confirmation restored".to_string()
-            }
+            "✓ Claude Code onboarding confirmation restored".to_string()
         }
     }
 
@@ -10240,16 +10249,14 @@ pub mod texts {
             } else {
                 "确认关闭 Claude Code for VSCode 插件联动？".to_string()
             }
+        } else if enable {
+            format!(
+                "Enable Claude Code for VSCode integration?\nWrites primaryApiKey=\"any\" to {path}"
+            )
         } else {
-            if enable {
-                format!(
-                    "Enable Claude Code for VSCode integration?\nWrites primaryApiKey=\"any\" to {path}"
-                )
-            } else {
-                format!(
-                    "Disable Claude Code for VSCode integration?\nRemoves primaryApiKey from {path}"
-                )
-            }
+            format!(
+                "Disable Claude Code for VSCode integration?\nRemoves primaryApiKey from {path}"
+            )
         }
     }
 
@@ -10260,12 +10267,10 @@ pub mod texts {
             } else {
                 "✓ 已关闭 Claude Code for VSCode 插件联动".to_string()
             }
+        } else if enable {
+            "✓ Claude Code for VSCode integration enabled".to_string()
         } else {
-            if enable {
-                "✓ Claude Code for VSCode integration enabled".to_string()
-            } else {
-                "✓ Claude Code for VSCode integration disabled".to_string()
-            }
+            "✓ Claude Code for VSCode integration disabled".to_string()
         }
     }
 
@@ -10497,12 +10502,10 @@ pub mod texts {
             } else {
                 format!("编辑 {app} 的通用配置片段（JSON 对象，留空则清除）：")
             }
+        } else if is_codex {
+            format!("Edit common config snippet for {app} (TOML; empty to clear):")
         } else {
-            if is_codex {
-                format!("Edit common config snippet for {app} (TOML; empty to clear):")
-            } else {
-                format!("Edit common config snippet for {app} (JSON object; empty to clear):")
-            }
+            format!("Edit common config snippet for {app} (JSON object; empty to clear):")
         }
     }
 
@@ -11136,6 +11139,108 @@ pub mod texts {
             "No live providers were imported"
         }
     }
+
+    // -----------------------------------------------------------------
+    // config.rs - validate_config_dir & prompt_fix_permissions
+    // -----------------------------------------------------------------
+
+    pub fn config_dir_is_system_dir(dir: &str, resolved: &str) -> String {
+        if is_chinese() {
+            format!("CC_SWITCH_CONFIG_DIR 不能设置为系统目录: {dir}（解析后: {resolved}）")
+        } else {
+            format!(
+                "CC_SWITCH_CONFIG_DIR must not be a system directory: {dir} (resolved: {resolved})"
+            )
+        }
+    }
+
+    pub fn config_dir_invalid_last_component(path: &str) -> String {
+        if is_chinese() {
+            format!("配置目录路径无效，无法解析最后一层目录: {path}")
+        } else {
+            format!("Invalid config directory path; unable to resolve the final directory component: {path}")
+        }
+    }
+
+    pub fn config_dir_only_final_component_may_be_missing(path: &str) -> String {
+        if is_chinese() {
+            format!("配置目录路径无效，仅允许最后一层目录不存在: {path}")
+        } else {
+            format!("Invalid config directory path; only the final directory component may be missing: {path}")
+        }
+    }
+
+    pub fn config_permissions_insecure_header() -> &'static str {
+        if is_chinese() {
+            "⚠ 检测到以下文件/目录权限不安全："
+        } else {
+            "⚠ Insecure file/directory permissions detected:"
+        }
+    }
+
+    pub fn config_permissions_detail(path: &str, current: u32, expected: u32) -> String {
+        if is_chinese() {
+            format!("  {path}  当前 {current:04o}，期望 {expected:04o}")
+        } else {
+            format!("  {path}  current {current:04o}, expected {expected:04o}")
+        }
+    }
+
+    pub fn config_permissions_fix_prompt() -> &'static str {
+        if is_chinese() {
+            "是否现在修复权限？（仅所有者可访问）"
+        } else {
+            "Fix permissions now? (owner-only access)"
+        }
+    }
+
+    pub fn config_permissions_fixed() -> &'static str {
+        if is_chinese() {
+            "✓ 权限已修复"
+        } else {
+            "✓ Permissions fixed"
+        }
+    }
+
+    pub fn config_permissions_fix_warn_interactive() -> &'static str {
+        if is_chinese() {
+            "⚠ 未来版本将拒绝在权限不安全的情况下启动，请尽快修复。"
+        } else {
+            "⚠ Future versions will refuse to start with insecure permissions. Please fix soon."
+        }
+    }
+
+    pub fn config_permissions_fix_warn_noninteractive() -> &'static str {
+        if is_chinese() {
+            "⚠ 检测到配置文件权限不安全（非交互模式），跳过修复。未来版本将拒绝启动。"
+        } else {
+            "⚠ Insecure config permissions detected (non-interactive). Skipped. Future versions will refuse to start."
+        }
+    }
+
+    pub fn config_permissions_custom_dir_notice(path: &str) -> String {
+        if is_chinese() {
+            format!("检测到自定义配置目录: {path}，请核实此目录不是关键系统目录")
+        } else {
+            format!("Custom config directory detected: {path}, please verify this is not a critical system directory")
+        }
+    }
+
+    pub fn config_permissions_confirm_custom_dir() -> &'static str {
+        if is_chinese() {
+            "确认要修改此目录的权限吗？"
+        } else {
+            "Confirm modifying permissions on this directory?"
+        }
+    }
+
+    pub fn config_permissions_custom_dir_skipped() -> &'static str {
+        if is_chinese() {
+            "已跳过权限修复。"
+        } else {
+            "Skipped permission fix."
+        }
+    }
 }
 
 #[cfg(test)]
@@ -11181,6 +11286,33 @@ mod tests {
         assert!(!help.contains("Skills:"));
         assert!(!help.contains("Config:"));
         assert!(!help.contains("Settings:"));
+    }
+
+    #[test]
+    fn config_dir_validation_messages_are_localized() {
+        {
+            let _lang = use_test_language(Language::English);
+            assert_eq!(
+                texts::config_dir_invalid_last_component("/tmp/child/.."),
+                "Invalid config directory path; unable to resolve the final directory component: /tmp/child/.."
+            );
+            assert_eq!(
+                texts::config_dir_only_final_component_may_be_missing("/tmp/child/.."),
+                "Invalid config directory path; only the final directory component may be missing: /tmp/child/.."
+            );
+        }
+
+        {
+            let _lang = use_test_language(Language::Chinese);
+            assert_eq!(
+                texts::config_dir_invalid_last_component("/tmp/child/.."),
+                "配置目录路径无效，无法解析最后一层目录: /tmp/child/.."
+            );
+            assert_eq!(
+                texts::config_dir_only_final_component_may_be_missing("/tmp/child/.."),
+                "配置目录路径无效，仅允许最后一层目录不存在: /tmp/child/.."
+            );
+        }
     }
 
     #[test]

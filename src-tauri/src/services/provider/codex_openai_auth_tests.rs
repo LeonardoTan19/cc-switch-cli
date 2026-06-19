@@ -1,56 +1,18 @@
 use super::*;
 use serial_test::serial;
-use std::ffi::OsString;
-use std::path::Path;
 use tempfile::TempDir;
 
-use crate::test_support::{
-    lock_test_home_and_settings, set_test_home_override, TestHomeSettingsLock,
-};
+use crate::test_support::TestEnvGuard;
 
-struct EnvGuard {
-    _lock: TestHomeSettingsLock,
-    old_home: Option<OsString>,
-    old_userprofile: Option<OsString>,
-}
-
-impl EnvGuard {
-    fn set_home(home: &Path) -> Self {
-        let lock = lock_test_home_and_settings();
-        let old_home = std::env::var_os("HOME");
-        let old_userprofile = std::env::var_os("USERPROFILE");
-        std::env::set_var("HOME", home);
-        std::env::set_var("USERPROFILE", home);
-        set_test_home_override(Some(home));
-        crate::settings::reload_test_settings();
-        Self {
-            _lock: lock,
-            old_home,
-            old_userprofile,
-        }
-    }
-}
-
-impl Drop for EnvGuard {
-    fn drop(&mut self) {
-        match &self.old_home {
-            Some(value) => std::env::set_var("HOME", value),
-            None => std::env::remove_var("HOME"),
-        }
-        match &self.old_userprofile {
-            Some(value) => std::env::set_var("USERPROFILE", value),
-            None => std::env::remove_var("USERPROFILE"),
-        }
-        set_test_home_override(self.old_home.as_deref().map(Path::new));
-        crate::settings::reload_test_settings();
-    }
+fn prefer_incoming_conflicts() -> live_merge::ConflictResolution<'static> {
+    live_merge::ConflictPolicy::PreferIncoming.into()
 }
 
 #[test]
 #[serial]
 fn switch_codex_provider_writes_stored_config_directly() {
     let temp_home = TempDir::new().expect("create temp home");
-    let _env = EnvGuard::set_home(temp_home.path());
+    let _env = TestEnvGuard::isolated(temp_home.path());
     std::fs::create_dir_all(crate::codex_config::get_codex_config_dir())
         .expect("create ~/.codex (initialized)");
 
@@ -75,7 +37,13 @@ fn switch_codex_provider_writes_stored_config_directly() {
     }
 
     let state = state_from_config(config);
-    ProviderService::switch(&state, AppType::Codex, "p1").expect("switch should succeed");
+    ProviderService::switch_with_resolution(
+        &state,
+        AppType::Codex,
+        "p1",
+        prefer_incoming_conflicts(),
+    )
+    .expect("switch should succeed");
 
     let config_text =
         std::fs::read_to_string(get_codex_config_path()).expect("read codex config.toml");
@@ -97,7 +65,7 @@ fn switch_codex_provider_writes_stored_config_directly() {
 #[serial]
 fn switch_codex_provider_migrates_legacy_flat_config() {
     let temp_home = TempDir::new().expect("create temp home");
-    let _env = EnvGuard::set_home(temp_home.path());
+    let _env = TestEnvGuard::isolated(temp_home.path());
     std::fs::create_dir_all(crate::codex_config::get_codex_config_dir())
         .expect("create ~/.codex (initialized)");
 
@@ -131,7 +99,13 @@ fn switch_codex_provider_migrates_legacy_flat_config() {
         .insert("custom1".to_string(), provider);
 
     let state = state_from_config(config);
-    ProviderService::switch(&state, AppType::Codex, "custom1").expect("switch should succeed");
+    ProviderService::switch_with_resolution(
+        &state,
+        AppType::Codex,
+        "custom1",
+        prefer_incoming_conflicts(),
+    )
+    .expect("switch should succeed");
 
     let config_text =
         std::fs::read_to_string(get_codex_config_path()).expect("read codex config.toml");
